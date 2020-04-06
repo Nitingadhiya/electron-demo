@@ -1,108 +1,54 @@
 {
-  "name": "gnosis-safe-multisig-desktop",
-  "version": "1.0.0",
-  "description": "A Desktop version of Gnosis Safe Multisig app",
+  "name": "Twork",
+  "version": "1.0.9",
+  "description": "Twork Electron",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "postinstall": "electron-builder install-app-deps",
-    "build": "electron-builder --mac --windows --linux",
-    "release": "electron-builder  --mac --windows --linux  --publish always"
+    "mac": "electron-builder -m",
+    "win": "electron-builder -w",
+    "build": "electron-builder -m",
+    "watch": "nodemon --exec 'electron .'",
+    "reset": "git reset --hard",
+    "publish": "electron-builder build -m -p onTagOrDraft"
   },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/Nitingadhiya/electron-demo.git"
-  },
-  "keywords": [
-    "Electron",
-    "gnosis",
-    "safe",
-    "multisig"
-  ],
-  "postinstall": "electron-builder install-app-deps",
-  "author": {
-    "name": "Protofire",
-    "email": "matias.dastugue@altoros.com"
-  },
-  "license": "CC0-1.0",
   "build": {
-    "appId": "io.gnosis.safe.macos",
+    "appId": "com.electron.twork",
+    "directories": {
+      "buildResources": "."
+    },
     "afterSign": "scripts/notarize.js",
-    "productName": "Safe Electron",
-    "asar": true,
-    "publish": [
-      {
-        "provider": "github",
-        "owner": "matextrem",
-        "repo": "safe-electron-multisig"
-      }
-    ],
-    "dmg": {
-      "sign": false,
-      "contents": [
-        {
-          "x": 110,
-          "y": 150
-        },
-        {
-          "x": 240,
-          "y": 150,
-          "type": "link",
-          "path": "/Applications"
-        }
-      ]
-    },
-    "files": [
-      "!apps${/*}",
-      "!build${/*}",
-      "!out${/*}",
-      "!.editorconfig",
-      "!.gitignore",
-      "!README.md",
-      "!yarn-error.log",
-      "!yarn.lock"
-    ],
     "mac": {
+      "category": "public.app-category.productivity",
       "hardenedRuntime": true,
-      "entitlements": "build/entitlements.mac.plist",
       "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
       "entitlementsInherit": "build/entitlements.mac.plist",
-      "target": [
-        "tar.gz",
-        "dmg",
-        "pkg",
-        "zip"
-      ]
-    },
-    "linux": {
-      "target": [
-        "AppImage",
-        "deb",
-        "zip"
-      ]
-    },
-    "win": {
       "publish": [
         "github"
-      ],
-      "target": [
-        "squirrel"
-      ],
-      "icon": "build/icon.ico"
+      ]
+    },
+    "dmg": {
+      "sign": false
     }
   },
-  "dependencies": {
-    "dotenv": "^8.2.0",
-    "electron-squirrel-startup": "^1.0.0",
-    "electron-updater": "^4.2.0",
-    "node-fetch": "^2.6.0",
-    "node-snackbar": "0.1.16"
-  },
+  "repository": "https://github.com/Nitingadhiya/electron-demo.git",
+  "keywords": [
+    "Electron",
+    "Twork"
+  ],
+  "author": "Twork Group - Nitin Gadhiya",
+  "license": "CC0-1.0",
   "devDependencies": {
-    "electron": "^7.1.10",
+    "electron": "^5.0.10",
     "electron-builder": "^22.3.2",
-    "electron-builder-squirrel-windows": "^22.3.3",
-    "electron-installer-squirrel-windows": "^1.3.0",
-    "electron-notarize": "^0.2.1"
+    "electron-notarize": "^0.2.1",
+    "nodemon": "^1.19.2"
+  },
+  "dependencies": {
+    "electron-log": "^4.0.4",
+    "electron-updater": "^4.2.0",
+    "jquery": "^3.4.1",
+    "query-string": "^6.10.1"
   }
 }

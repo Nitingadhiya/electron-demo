@@ -1,99 +1,109 @@
-const os = require('os');
-const fetch = require('node-fetch');
-const { autoUpdater, dialog, app } = require('electron');
-const appVersion = app.getVersion();
+// Modules
+const { dialog, BrowserWindow, ipcMain } = require("electron");
+const { autoUpdater } = require("electron-updater");
 
-let updateFeed = '';
-let latestVersion = null;
-let linuxUri = undefined;
-let initialized = false;
-const cmd = process.argv[1];
-const platform = os.platform();
+// // Enable logging
+autoUpdater.logger = require("electron-log");
+autoUpdater.logger.transports.file.level = "info";
 
-const nutsURL = 'https://safe-electron-multisig.now.sh';
+// Disable auto downloading
+autoUpdater.autoDownload = false;
 
-if (platform === 'darwin') {
-  updateFeed = `${nutsURL}/update/${platform}/${appVersion}`;
-} else if (os.platform() === 'win32') {
-  updateFeed = `${nutsURL}/update/win32/${appVersion}`;
-} else if (os.platform() === 'linux') {
-  fetch(`${nutsURL}/latest-version`)
-    .then(res => res.json())
-    .then(res => {
-      latestVersion = res.version.substring(1);
-      linuxUri = res.files.AppImage.url;
-    });
-}
-
-function init(mainWindow) {
-  mainWindow.webContents.send('console', `App version: ${appVersion}`);
-
-  if (latestVersion && appVersion < latestVersion) {
-    mainWindow.webContents.send('message', {
-      msg: `🎉 There is an update available!`,
-      hide: false,
-      isLinux: true,
-      action: true,
-      linuxUri,
-    });
-    return;
-  }
-
-  mainWindow.webContents.send('message', {
-    msg: `🖥 App version: ${appVersion}`,
-    hide: true,
-  });
-
-  if (initialized || !updateFeed || process.env.NODE_ENV === 'development') {
-    return;
-  }
-
-  initialized = true;
-
-  autoUpdater.setFeedURL(updateFeed);
-
-  autoUpdater.on('error', (ev, err) => {
-    let options = {
-      message: err,
-    };
-    const response = dialog.showMessageBox(options);
-    console.log(response);
-    //mainWindow.webContents.send('message', { msg: `😱 Error: ${err}`, hide:false })
-  });
-
-  autoUpdater.once('checking-for-update', (ev, err) => {
-    mainWindow.webContents.send('message', {
-      msg: '🔎 Checking for updates',
-      hide: false,
+// Check for updates
+exports.check = () => {
+  // Start update check
+  autoUpdater.checkForUpdates();
+  let downloadProgress = 0;
+  // Listen for download (update) found
+  autoUpdater.on("update-available", (res) => {
+    let forceUpdate = res.force ? ["Update"] : ["Update", "No"];
+    // Track progress percent
+    autoUpdater.downloadUpdate();
+    autoUpdater.on("update-downloaded", () => {
+      // Close progressWin
+      // if (progressWin) progressWin.close();
+      autoUpdater.logger.info("Update Downloaded...");
+      // Prompt user to quit and install update
+      dialog.showMessageBox(
+        {
+          type: "info",
+          title: "Update Ready",
+          message: "A new version of Twork is ready. Quit and install now?",
+          buttons: ["Yes", "Later"],
+        },
+        (buttonIndex) => {
+          // Update if 'Yes'
+          if (buttonIndex === 0) autoUpdater.quitAndInstall();
+        }
+      );
     });
   });
+  // Prompt user to update
+  //   dialog.showMessageBox(
+  //     {
+  //       type: "info",
+  //       title: "Update Available",
+  //       message:
+  //         "A new version of Twork is available. Do you want to update now?",
+  //       buttons: forceUpdate,
+  //     },
+  //     (buttonIndex) => {
+  //       // If not 'Update' button, return
+  //       if (buttonIndex !== 0) return;
+  //       autoUpdater.logger.info("download starting...");
+  //       // Else start download and show download progress in new window
+  //       autoUpdater.downloadUpdate();
 
-  autoUpdater.once('update-available', (ev, err) => {
-    mainWindow.webContents.send('message', {
-      msg: '🎉 Update available. Downloading ⌛️',
-      hide: false,
-    });
+  //       // Create progress window
+  //       // let progressWin = new BrowserWindow({
+  //       //   width: 250,
+  //       //   height: 50,
+  //       //   useContentSize: true,
+  //       //   autoHideMenuBar: true,
+  //       //   maximizable: false,
+  //       //   fullscreen: false,
+  //       //   fullscreenable: false,
+  //       //   resizable: false,
+  //       //   webPreferences: { nodeIntegration: true },
+  //       // });
+  //       // // Load progress HTML
+  //       // progressWin.loadURL(`file://${__dirname}/progress.html`);
+
+  //       // // Handle win close
+  //       // progressWin.on("closed", () => {
+  //       //   progressWin = null;
+  //       // });
+
+  //       // Listen for completed update download
+  //       autoUpdater.on("update-downloaded", () => {
+  //         // Close progressWin
+  //         // if (progressWin) progressWin.close();
+  //         autoUpdater.logger.info("Update Downloaded...");
+  //         // Prompt user to quit and install update
+  //         dialog.showMessageBox(
+  //           {
+  //             type: "info",
+  //             title: "Update Ready",
+  //             message: "A new version of Twork is ready. Quit and install now?",
+  //             buttons: ["Yes", "Later"],
+  //           },
+  //           (buttonIndex) => {
+  //             // Update if 'Yes'
+  //             if (buttonIndex === 0) autoUpdater.quitAndInstall();
+  //           }
+  //         );
+  //       });
+  //     }
+  //   );
+  // });
+  // Track download progress on autoUpdater
+  autoUpdater.on("download-progress", (d) => {
+    downloadProgress = d.percent;
+    autoUpdater.logger.info(downloadProgress);
   });
-
-  autoUpdater.once('update-not-available', (ev, err) => {
-    mainWindow.webContents.send('message', {
-      msg: '👎 Update not available',
-      hide: false,
-    });
+  // Listen for preogress request from progressWin
+  ipcMain.on("download-progress-request", (e) => {
+    e.returnValue = downloadProgress;
+    global.mainWindow.setProgressBar(downloadProgress / 100);
   });
-
-  autoUpdater.once('update-downloaded', (ev, err) => {
-    mainWindow.webContents.send('message', {
-      msg: '🤘 Update downloaded.',
-      hide: false,
-      isLinux: false,
-      action: true,
-    });
-  });
-
-  if (cmd !== '--squirrel-firstrun') autoUpdater.checkForUpdates();
-}
-
-module.exports = {
-  init,
 };
